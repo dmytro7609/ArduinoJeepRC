@@ -1,5 +1,3 @@
-#include <Adafruit_BMP280.h>
-#include <Adafruit_Sensor.h>
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <Servo.h>
@@ -9,10 +7,7 @@
 RF24 radio(9, 53);
 
 Servo sWheels; // servo motor for turning wheels
-Servo sGears;  // servo motor for gear shifting
 Servo esc;     // motor control board
-
-Adafruit_BMP280 bmp280;
 
 const int ledLight1 = 4;   // Bumber left LED
 const int ledLight2 = 6;   // Bumper right LED
@@ -41,23 +36,12 @@ int checkDayLight = 0;
 void setup() {
   Serial.begin(9600);
   radio.begin();                            // initialize the operation of the NRF24L01 module
-  radio.setDataRate (RF24_2MBPS);           // set the data transmission rate
+  radio.setDataRate (RF24_1MBPS);           // set the data transmission rate
   radio.setPayloadSize(32);                 // set the data packet size
-  radio.enableAckPayload();                 // set the confirmation for received data (to send a response to that data)
-  radio.setRetries(0, 0);                   // set the number and intervals of retries when sending data (retries are disabled)
-  radio.setPALevel(RF24_PA_MAX);            // set the transmission signal power level (maximum)
+  radio.setPALevel(RF24_PA_HIGH);           // set the transmission signal power level (try RF24_PA_HIGH)
   radio.openReadingPipe(1, 0x7878787878LL); // open the pipe with the transmitter's ID
-  radio.setChannel(0x60);                   // set the channel for wireless communication
+  radio.setChannel(0x4C);                   // set the channel for wireless communication
   radio.startListening();                   // start listening on the opened pipe
-
-  if (!bmp280.begin(0x76)) {
-    while (1);
-  }
-  bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,
-                     Adafruit_BMP280::SAMPLING_X16,
-                     Adafruit_BMP280::SAMPLING_X2,
-                     Adafruit_BMP280::FILTER_X16,
-                     Adafruit_BMP280::STANDBY_MS_500);
   
   pinMode(ledLight1, OUTPUT);
   pinMode(ledLight2, OUTPUT);
@@ -81,26 +65,12 @@ void setup() {
 
   sWheels.attach(2);
   sWheels.write(0);
-
-  sGears.attach(3);
-  sGears.write(0);
 }
 
 
 void loop() {
-  float temperature = bmp280.readTemperature();
-
   if (radio.available()) {
     radio.read(&car_value, sizeof(car_value));
-
-    if (car_value[4] == 1) {
-      int wheelsAngle = map(180, 0, 1023, 0, 180);
-      sGears.write(wheelsAngle);
-    }
-    else if (car_value[4] == 0) {
-      int wheelsAngle = map(0, 0, 1023, 0, 180);
-      sGears.write(wheelsAngle);
-    }
 
     int wheelsAngle = map(car_value[0], 0, 1023, 0, 180);
     sWheels.write(wheelsAngle);
@@ -121,9 +91,6 @@ void loop() {
       dayLight(checkDayLight);
     }
     blinkers(car_value[2], car_value[3]);
-
-    ackData[0] = temperature;
-    radio.writeAckPayload(1, &ackData, sizeof(ackData));
   }
 }
 
@@ -135,8 +102,8 @@ void roofLightBar(int option){
 }
 
 void bumperLight(int option) {
-  digitalWrite(ledBar1, option);
-  digitalWrite(ledBar2, option);
+  digitalWrite(ledLight1, option);
+  digitalWrite(ledLight2, option);
 }
 
 void dayLight(int option) {
@@ -144,12 +111,31 @@ void dayLight(int option) {
   digitalWrite(ledLight12, option);
   digitalWrite(ledLight13, option);
   digitalWrite(ledLight14, option);
-  digitalWrite(ledNormal5, option);
+  digitalWrite(ledLight15, option);
 }
 
 void blinkers(int sideLeft, int sideRight) {
-  digitalWrite(ledLight16, sideLeft == 1 ? HIGH : LOW);
-  digitalWrite(ledLight6, sideLeft == 1 ? HIGH : LOW);
-  digitalWrite(ledLight17, sideRight == 1 ? HIGH : LOW);
-  digitalWrite(ledLight7, sideRight == 1 ? HIGH : LOW);
+  if (sideLeft == 1) {
+    digitalWrite(ledLight16, HIGH);
+    digitalWrite(ledLight6, HIGH);
+    delay(500);
+    digitalWrite(ledLight16, LOW);
+    digitalWrite(ledLight6, LOW);
+    delay(500);
+  } else {
+    digitalWrite(ledLight16, LOW);
+    digitalWrite(ledLight6, LOW);
+  }
+
+  if (sideRight == 1) {
+    digitalWrite(ledLight17, HIGH);
+    digitalWrite(ledLight7, HIGH);
+    delay(500);
+    digitalWrite(ledLight17, LOW);
+    digitalWrite(ledLight7, LOW);
+    delay(500);
+  } else {
+    digitalWrite(ledLight17, LOW);
+    digitalWrite(ledLight7, LOW);
+  }
 }

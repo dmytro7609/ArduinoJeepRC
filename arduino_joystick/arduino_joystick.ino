@@ -2,9 +2,6 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 
 RF24 radio(9, 10);
@@ -13,42 +10,28 @@ int orig_speed = 0;
 int invert_speed = 0;
 int left_side = 0;
 int right_side = 0;
-int ackData[1];
 
 #define JOYSTICKX A1 // Speed control
 #define JOYSTICKY A0 // Steering control
 
 ezButton BUTTON_FIRST(4);   // Button that activates the left turn signal
 ezButton BUTTON_SECOND(2);  // Button that activates the right turn signal
-ezButton TOGGLE_SWITCH1(7); // Toggle switch for gear shifting
+ezButton TOGGLE_SWITCH1(7); // Toggle switch to turn on/off motor sound
 ezButton TOGGLE_SWITCH2(8); // Toggle switch for roof light bar
 ezButton TOGGLE_SWITCH3(6); // Toggle switch for bumper lights
 ezButton TOGGLE_SWITCH4(5); // Toggle switch for markers, low beam and brake lights
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-#define OLED_RESET     -1
-#define SCREEN_ADDRESS 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void setup() {
   Serial.begin(9600);
 
   radio.begin();                         // initialize the operation of the NRF24L01 module
-  radio.setDataRate (RF24_2MBPS);        // set the data transmission rate
+  radio.setDataRate (RF24_1MBPS);        // set the data transmission rate
   radio.setPayloadSize(32);              // set the data packet size
-  radio.enableAckPayload();              // set the confirmation for received data (to send a response to that data)
-  radio.setRetries(0, 0);                // set the number and intervals of retries when sending data (retries are disabled)
-  radio.setPALevel(RF24_PA_MAX);         // set the transmission signal power level (maximum)
+  radio.setRetries(5, 15);               // set the number and intervals of retries when sending data (retries are disabled)
+  radio.setPALevel(RF24_PA_HIGH);        // set the transmission signal power level (try RF24_PA_MAX)
   radio.openWritingPipe(0x7878787878LL); // set the address for data transmission
-  radio.setChannel(0x60);                // set the channel for wireless communication
+  radio.setChannel(0x4C);                // set the channel for wireless communication
   radio.stopListening();                 // switch the module to transmitter mode
-
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
-  }
 }
 
 void loop() {
@@ -102,21 +85,5 @@ void loop() {
     car_value[7] = 0;
   }
 
-
   radio.write(&car_value, sizeof(car_value));
-  if ( radio.isAckPayloadAvailable() ) {
-    float receivedTemperature;
-    radio.read(&ackData, sizeof(ackData));
-    display.clearDisplay();
-    display.setTextColor(WHITE);
-    display.setTextSize(3);
-    display.setCursor(1, 6);
-    display.println("Temp:");
-    display.println(ackData[0]);
-    //display.println(receivedTemperature, 1);
-    display.setCursor(73, 30);
-    display.setTextSize(1);
-    display.print("C");
-    display.display();
-  }
 }
