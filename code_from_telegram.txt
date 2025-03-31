@@ -1,0 +1,10 @@
+value1 = 200  # значення з джойстика
+
+fromLow = 0
+fromHigh = 1023
+toLow = 0
+toHigh = 180
+
+value = ((value1 - fromLow) * (toHigh - toLow)) / (fromHigh - fromLow) + toLow
+print(value)
+print(value1 * 0.9) # варіант як можна понизити значення джойтика
